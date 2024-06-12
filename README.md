@@ -1,6 +1,6 @@
 # Engine simulation
 
 ## Run with
-"""bash
+```bash
 ./make run
-"""
+```
