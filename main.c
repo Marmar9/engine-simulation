@@ -11,9 +11,8 @@
 #define p 1.1225
 #define g 9.81
 
-#define dt 0.00001
+#define dt 0.001
 #define ROUTE_LENGTH 1000
-#define V_MULTIPLIER 100
 
 #define EXPECTED_TIME 100
 
@@ -26,7 +25,7 @@ inline double compute_a(double t, double v, double alpha, int F) {
   return (F - (cx * p * A * v) - m * g * sin(alpha * M_PI / 180)) / m;
 }
 
-// Runke kutta 4
+// Runge kutta 4
 int main(int argc, char *argv[]) {
   double t = 0.0;
   double v = 0.0;
@@ -37,7 +36,9 @@ int main(int argc, char *argv[]) {
   clock_t start, end;
   start = clock();
 
-  float maybe_v = (ROUTE_LENGTH / 100.0f) - 0.909;
+  double acceleration_time =
+      (double)(F - (cx * p * A * ROUTE_LENGTH / EXPECTED_TIME)) / m *
+      ROUTE_LENGTH / EXPECTED_TIME;
 
   double k1, k2, k3, k4;
   int i = 0;
@@ -45,43 +46,62 @@ int main(int argc, char *argv[]) {
   while (true) {
     if (s > (i > 0 ? i * 100 : i + 100)) {
       i++;
-    } else if (i > sizeof(SECIONS_SLOPES) / sizeof(int)) {
-      double absolute_error = fabs(t - EXPECTED_TIME);
-      //       end = clock();
-      //       printf("A: %f, V: %f, S: %f\n", k1, v, s);
-      //       printf("T: %f, AbsoluteError: %f, MaxV: %f\n", t, absolute_error,
-      //              maybe_v);
-      //       printf("Time sint pent: %fs\n", ((double)(end - start)) /
-      //       CLOCKS_PER_SEC);
+    }
 
-      if (absolute_error < dt * V_MULTIPLIER * 10) {
-        end = clock();
-        printf("A: %f, V: %f, S: %f\n", k1, v, s);
-        printf("T: %f, AbsoluteError: %f, MaxV: %f\n", t, absolute_error,
-               maybe_v);
-        printf("Total time: %fs\n", ((double)(end - start)) / CLOCKS_PER_SEC);
+    if (t > acceleration_time) {
+      F = 0;
+    }
 
-        break;
-      } else {
-        if (t < EXPECTED_TIME) {
-          maybe_v -= dt * V_MULTIPLIER;
-        } else if (t > EXPECTED_TIME) {
-          maybe_v += dt * V_MULTIPLIER;
+    if (t > 100) {
+      if (fabs(s - ROUTE_LENGTH) < dt * 100) {
+        if (s > ROUTE_LENGTH) {
+          end = clock();
+
+          printf("\n\n\n\n");
+          printf("------------- Solved --------------\n\n");
+          printf("A: %f, V: %f, S: %f\n", k1, v, s);
+          printf("T: %f, AbsoluteError: %f, AccelerationTime: %f\n", t,
+                 fabs(s - ROUTE_LENGTH), acceleration_time);
+          printf("Total time: %fs\n", ((double)(end - start)) / CLOCKS_PER_SEC);
+
+          break;
         }
 
+      } else if (k1 < 0) {
+        acceleration_time += dt;
+        printf("A: %f, V: %f, S: %f\n", k1, v, s);
+        printf("T: %f, AbsoluteError: %f, AccelerationTime: %fs\n", t,
+               fabs(s - ROUTE_LENGTH), acceleration_time);
+        printf("Total time: %fs\n", ((double)(end - start)) / CLOCKS_PER_SEC);
         t = 0;
         s = 0;
         v = 0;
         i = 0;
+        F = 1000;
+      } else if (s > ROUTE_LENGTH) {
+        acceleration_time -= dt;
+        printf("A: %f, V: %f, S: %f\n", k1, v, s);
+        printf("T: %f, AbsoluteError: %f, AccelerationTime: %fs\n", t,
+               fabs(s - ROUTE_LENGTH), acceleration_time);
+        printf("Total time: %fs\n", ((double)(end - start)) / CLOCKS_PER_SEC);
+        t = 0;
+        s = 0;
+        v = 0;
+        i = 0;
+        F = 1000;
+      } else if (s < ROUTE_LENGTH) {
+        acceleration_time += dt;
+        printf("A: %f, V: %f, S: %f\n", k1, v, s);
+        printf("T: %f, AbsoluteError: %f, AccelerationTime: %fs\n", t,
+               fabs(s - ROUTE_LENGTH), acceleration_time);
+        printf("Total time: %fs\n", ((double)(end - start)) / CLOCKS_PER_SEC);
+        t = 0;
+        s = 0;
+        v = 0;
+        i = 0;
+        F = 1000;
       }
     }
-
-    if (v > maybe_v) {
-      F = 0;
-    } else {
-      F = 1000;
-    }
-
     k1 = compute_a(t, v, SECIONS_SLOPES[i], F);
     k2 = compute_a(t + dt / 2, v, SECIONS_SLOPES[i], F);
     k3 = k2;
